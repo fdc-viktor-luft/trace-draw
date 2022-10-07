@@ -1,0 +1,26 @@
+main {
+    position: relative;
+    height: 100%;
+    width: 100%;
+
+    img {
+        height: auto;
+        width: 100%;
+        opacity: 0.4;
+        position: absolute;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    canvas {
+        width: 100%;
+    }
+
+    .buttons {
+        position: fixed;
+        bottom: 1em;
+        right: 1em;
+        display: flex;
+        gap: 1em;
+    }
+}
