@@ -22,7 +22,7 @@ const listFiles = (dir) => {
     });
 };
 
-const result = await exec('pnpm build',{  cwd: 'frontend' });
+const result = await exec('pnpm build',{  cwd: '.' });
 const frontendBuildDir = 'dist';
 const allDocsFiles = listFiles('docs').map(p => path.relative('docs', p)).sort();
 const allBuildFiles = listFiles(frontendBuildDir).map(p => path.relative(frontendBuildDir, p)).sort();
