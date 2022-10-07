@@ -9,6 +9,7 @@ export default defineConfig({
         strictPort: false, // make it true, if you don't want to take next free port but fail
     },
     build: {
+        outDir: 'dist',
         sourcemap: true, // build "*.map" files for JS sources
         manifest: false, // create a manifest.json for further processing of generated assets
     },

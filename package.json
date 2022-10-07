@@ -4,11 +4,13 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fdc-viktor-luft/raw-vite-app"
+    "url": "https://github.com/fdc-viktor-luft/trace-draw"
   },
+  "homepage": "https://fdc-viktor-luft.github.io/trace-draw/",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
+    "build:docs": "rm -rf ./docs && pnpm build && mv dist ./docs",
     "serve": "vite preview",
     "lint": "pnpm lint:cc && pnpm lint:es && pnpm lint:ts",
     "lint:fix": "pnpm lint:es -- --fix",
