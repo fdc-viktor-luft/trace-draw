@@ -4,12 +4,17 @@ import { DownloadButton } from './DownloadButton';
 const FONT_HEIGHT = 60;
 const LINE_WIDTH = 5;
 
+type TouchOrMouseEvent = React.TouchEvent | React.MouseEvent;
+
 type Coords = { x: number; y: number };
 type UserEvents = { lines: { points: Coords[]; lineWidth: number }[]; texts: { text: string; coords: Coords }[] };
 
-const convertToCoords = (e: React.MouseEvent): Coords => {
-    const xRate = e.clientX / innerWidth;
-    const yRate = e.clientY / innerWidth;
+const convertToCoords = (e: TouchOrMouseEvent): Coords => {
+    const xEvent = 'touches' in e ? (e.touches[0] as any).pageX : e.pageX;
+    const yEvent = 'touches' in e ? (e.touches[0] as any).pageY : e.pageY;
+
+    const xRate = xEvent / innerWidth;
+    const yRate = yEvent / innerWidth;
 
     const x = xRate * 1000;
     const y = yRate * 1000;
@@ -43,7 +48,7 @@ export const Drawing: React.FC = () => {
         }
     }, []);
 
-    const onMouseDown = (e: React.MouseEvent) => {
+    const onMouseDown = (e: TouchOrMouseEvent) => {
         const coords = convertToCoords(e);
 
         if (isPlaceText) {
@@ -62,7 +67,7 @@ export const Drawing: React.FC = () => {
         isDrawing.current = false;
     };
 
-    const onMouseMove = (e: React.MouseEvent) => {
+    const onMouseMove = (e: TouchOrMouseEvent) => {
         if (isDrawing.current) {
             const coords = convertToCoords(e);
             userEvents.current.lines.at(-1)!.points.push(coords);
@@ -127,19 +132,24 @@ export const Drawing: React.FC = () => {
                 width={1000}
                 height={1000}
                 ref={ref}
-                onMouseMove={onMouseMove}
                 onMouseDown={onMouseDown}
+                onTouchStart={onMouseDown}
+                onMouseMove={onMouseMove}
+                onTouchMove={onMouseMove}
                 onMouseUp={onMouseUp}
+                onTouchEnd={onMouseUp}
                 onMouseLeave={onMouseUp}
             />
-            <div className="buttons">
-                {isPlaceText && <input autoFocus onChange={onChangeText} value={text} />}
-                {isPlaceText && <input type="number" onChange={onChangeFontSize} value={fontSize} />}
-                {!isPlaceText && <input type="number" onChange={onChangeLineWidth} value={lineWidth} />}
-                <button onClick={onPlaceText}>{isPlaceText ? 'Draw' : 'Add Text'}</button>
-                <button onClick={revert}>Revert</button>
-                <DownloadButton />
-            </div>
+            <footer>
+                <div className="buttons">
+                    {isPlaceText && <input autoFocus onChange={onChangeText} value={text} />}
+                    {isPlaceText && <input type="number" onChange={onChangeFontSize} value={fontSize} />}
+                    {!isPlaceText && <input type="number" onChange={onChangeLineWidth} value={lineWidth} />}
+                    <button onClick={onPlaceText}>{isPlaceText ? 'Draw' : 'Add Text'}</button>
+                    <button onClick={revert}>Revert</button>
+                    <DownloadButton />
+                </div>
+            </footer>
         </>
     );
 };
