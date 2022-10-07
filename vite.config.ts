@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [react()],
+    base: '/trace-draw/',
     server: {
         port: 3100,
         strictPort: false, // make it true, if you don't want to take next free port but fail
