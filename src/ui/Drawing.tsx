@@ -109,6 +109,7 @@ export const Drawing: React.FC<{ imageData: string }> = ({ imageData }) => {
         });
         drawingContext.current.lineWidth = getLineWidth(lineWidth);
         userEvents.current.texts.forEach(({ coords: { x, y }, text }) => {
+            drawingContext.current.fillStyle = 'black';
             drawingContext.current.fillText(text, x, y + getFontSize(fontSize));
         });
     };
