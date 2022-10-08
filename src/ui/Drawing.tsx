@@ -1,17 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { DownloadButton } from './DownloadButton';
+import { Coords, getEventCoords, TouchOrMouseEvent } from './common';
 
 const FONT_HEIGHT = 60;
 const LINE_WIDTH = 5;
 
-type TouchOrMouseEvent = React.TouchEvent | React.MouseEvent;
-
-type Coords = { x: number; y: number };
 type UserEvents = { lines: { points: Coords[]; lineWidth: number }[]; texts: { text: string; coords: Coords }[] };
 
 const convertToCoords = (e: TouchOrMouseEvent): Coords => {
-    const xEvent = 'touches' in e ? (e.touches[0] as any).pageX : e.pageX;
-    const yEvent = 'touches' in e ? (e.touches[0] as any).pageY : e.pageY;
+    const { x: xEvent, y: yEvent } = getEventCoords(e);
 
     const xRate = xEvent / innerWidth;
     const yRate = yEvent / innerWidth;
@@ -32,15 +29,26 @@ const initDrawingContext = (canvas: HTMLCanvasElement) => {
     return ctx;
 };
 
-export const Drawing: React.FC = () => {
+const getNumber = (str: string, fallback: number): number => {
+    if (!str) return fallback;
+    const num = +str;
+    if (isNaN(num)) return fallback;
+    return num;
+};
+
+const getFontSize = (str: string): number => getNumber(str, FONT_HEIGHT);
+const getLineWidth = (str: string): number => getNumber(str, LINE_WIDTH);
+
+export const Drawing: React.FC<{ imageData: string }> = ({ imageData }) => {
     const ref = useRef<HTMLCanvasElement | null>(null);
     const isDrawing = useRef(false);
     const userEvents = useRef<UserEvents>({ lines: [], texts: [] });
     const drawingContext = useRef<CanvasRenderingContext2D>(null!);
+    const [isWhiteBackgroundJpeg, setIsWhiteBackgroundJpeg] = useState(false);
     const [isPlaceText, setIsPlaceText] = useState(false);
     const [text, setText] = useState('');
-    const [fontSize, setFontSize] = useState(FONT_HEIGHT);
-    const [lineWidth, setLineWidth] = useState(LINE_WIDTH);
+    const [fontSize, setFontSize] = useState(String(FONT_HEIGHT));
+    const [lineWidth, setLineWidth] = useState(String(LINE_WIDTH));
 
     useEffect(() => {
         if (!drawingContext.current) {
@@ -57,7 +65,7 @@ export const Drawing: React.FC = () => {
         } else {
             isDrawing.current = true;
 
-            userEvents.current.lines.push({ points: [coords], lineWidth });
+            userEvents.current.lines.push({ points: [coords], lineWidth: getLineWidth(lineWidth) });
             drawingContext.current.beginPath();
             drawingContext.current.moveTo(coords.x, coords.y);
         }
@@ -84,10 +92,14 @@ export const Drawing: React.FC = () => {
         }
     };
 
-    const redraw = () => {
+    const redraw = (isWhiteBackgroundJpegChecked = isWhiteBackgroundJpeg) => {
         drawingContext.current.clearRect(0, 0, ref.current!.width, ref.current!.height);
-        drawingContext.current.beginPath();
+        if (isWhiteBackgroundJpegChecked) {
+            drawingContext.current.fillStyle = 'white';
+            drawingContext.current.fillRect(0, 0, ref.current!.width, ref.current!.height);
+        }
         userEvents.current.lines.forEach(({ points, lineWidth }) => {
+            drawingContext.current.beginPath();
             drawingContext.current.lineWidth = lineWidth;
             drawingContext.current.moveTo(points[0].x, points[0].y);
             points.slice(1).forEach(({ x, y }) => {
@@ -95,9 +107,9 @@ export const Drawing: React.FC = () => {
             });
             drawingContext.current.stroke();
         });
-        drawingContext.current.lineWidth = lineWidth;
+        drawingContext.current.lineWidth = getLineWidth(lineWidth);
         userEvents.current.texts.forEach(({ coords: { x, y }, text }) => {
-            drawingContext.current.fillText(text, x, y + fontSize);
+            drawingContext.current.fillText(text, x, y + getFontSize(fontSize));
         });
     };
 
@@ -109,16 +121,16 @@ export const Drawing: React.FC = () => {
     };
 
     const onChangeFontSize = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const nextFontSize = +e.target.value;
+        const nextFontSize = e.target.value;
         setFontSize(nextFontSize);
-        drawingContext.current.font = getFont(nextFontSize);
+        drawingContext.current.font = getFont(getFontSize(nextFontSize));
         redraw();
     };
 
     const onChangeLineWidth = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const nextLineWidth = +e.target.value;
+        const nextLineWidth = e.target.value;
         setLineWidth(nextLineWidth);
-        drawingContext.current.lineWidth = nextLineWidth;
+        drawingContext.current.lineWidth = getLineWidth(nextLineWidth);
     };
 
     const revert = () => {
@@ -126,8 +138,15 @@ export const Drawing: React.FC = () => {
         redraw();
     };
 
+    const toggleIsWhiteBackgroundJpeg = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const nextChecked = e.target.checked;
+        setIsWhiteBackgroundJpeg(nextChecked);
+        redraw(nextChecked);
+    };
+
     return (
         <>
+            <div className={'canvas-bg'} style={{ backgroundImage: `url(${imageData})` }} />
             <canvas
                 width={1000}
                 height={1000}
@@ -142,12 +161,37 @@ export const Drawing: React.FC = () => {
             />
             <footer>
                 <div className="buttons">
-                    {isPlaceText && <input autoFocus onChange={onChangeText} value={text} />}
-                    {isPlaceText && <input type="number" onChange={onChangeFontSize} value={fontSize} />}
-                    {!isPlaceText && <input type="number" onChange={onChangeLineWidth} value={lineWidth} />}
+                    {isPlaceText && (
+                        <label>
+                            Text
+                            <input autoFocus onChange={onChangeText} value={text} />
+                        </label>
+                    )}
+                    {isPlaceText && (
+                        <label>
+                            Font Size
+                            <input type="number" onChange={onChangeFontSize} value={fontSize} />
+                        </label>
+                    )}
+                    {!isPlaceText && (
+                        <label>
+                            <input
+                                type="checkbox"
+                                onChange={toggleIsWhiteBackgroundJpeg}
+                                checked={isWhiteBackgroundJpeg}
+                            />
+                            As Jpeg
+                        </label>
+                    )}
+                    {!isPlaceText && (
+                        <label>
+                            Line Width
+                            <input type="number" onChange={onChangeLineWidth} value={lineWidth} />
+                        </label>
+                    )}
                     <button onClick={onPlaceText}>{isPlaceText ? 'Draw' : 'Add Text'}</button>
                     <button onClick={revert}>Revert</button>
-                    <DownloadButton />
+                    <DownloadButton format={isWhiteBackgroundJpeg ? 'jpeg' : 'png'} />
                 </div>
             </footer>
         </>
