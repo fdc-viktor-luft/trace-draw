@@ -3,11 +3,12 @@ main {
     height: 100%;
     width: 100%;
 
-    img {
-        height: auto;
-        width: 100%;
-        opacity: 0.4;
+    .canvas-bg {
+        background-size: 100%;
         position: absolute;
+        width: 100vw;
+        height: 100vw;
+        opacity: 0.5;
         pointer-events: none;
         z-index: -1;
     }
@@ -19,7 +20,8 @@ main {
     footer {
         position: fixed;
         bottom: 1em;
-        right: 1em;
+        left: 1em;
+        width: calc(100% - 2em);
     }
 
     .buttons {
