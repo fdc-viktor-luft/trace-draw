@@ -1,20 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { DownloadButton } from './DownloadButton';
-import { Coords, getEventCoords, TouchOrMouseEvent } from './common';
+import { Coords, getEventCoords, getNumber, TouchOrMouseEvent } from './common';
+import TextFieldsIcon from '../assets/images/text_fields.svg';
+import { Store, useSub } from '../store';
 
 const FONT_HEIGHT = 60;
 const LINE_WIDTH = 5;
 
-type UserEvents = { lines: { points: Coords[]; lineWidth: number }[]; texts: { text: string; coords: Coords }[] };
+type UserEvents = {
+    lines: { points: Coords[]; lineWidth: number; isRounded: boolean }[];
+    texts: { text: string; coords: Coords }[];
+};
 
 const convertToCoords = (e: TouchOrMouseEvent): Coords => {
     const { x: xEvent, y: yEvent } = getEventCoords(e);
+    const { widthAndHeight } = Store.get();
 
     const xRate = xEvent / innerWidth;
     const yRate = yEvent / innerWidth;
 
-    const x = xRate * 1000;
-    const y = yRate * 1000;
+    const x = xRate * widthAndHeight;
+    const y = yRate * widthAndHeight;
 
     return { x, y };
 };
@@ -24,16 +30,10 @@ const getFont = (fontSize: number) => 'bolder ' + fontSize + 'px Tangerine';
 const initDrawingContext = (canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')!;
     ctx.lineWidth = LINE_WIDTH;
+    ctx.lineCap = 'round';
     ctx.strokeStyle = 'black';
     ctx.font = getFont(FONT_HEIGHT);
     return ctx;
-};
-
-const getNumber = (str: string, fallback: number): number => {
-    if (!str) return fallback;
-    const num = +str;
-    if (isNaN(num)) return fallback;
-    return num;
 };
 
 const getFontSize = (str: string): number => getNumber(str, FONT_HEIGHT);
@@ -45,10 +45,12 @@ export const Drawing: React.FC<{ imageData: string }> = ({ imageData }) => {
     const userEvents = useRef<UserEvents>({ lines: [], texts: [] });
     const drawingContext = useRef<CanvasRenderingContext2D>(null!);
     const [isWhiteBackgroundJpeg, setIsWhiteBackgroundJpeg] = useState(false);
+    const [isRounded, setIsRounded] = useState(true);
     const [isPlaceText, setIsPlaceText] = useState(false);
     const [text, setText] = useState('');
     const [fontSize, setFontSize] = useState(String(FONT_HEIGHT));
     const [lineWidth, setLineWidth] = useState(String(LINE_WIDTH));
+    const { widthAndHeight } = useSub((s) => s);
 
     useEffect(() => {
         if (!drawingContext.current) {
@@ -65,7 +67,7 @@ export const Drawing: React.FC<{ imageData: string }> = ({ imageData }) => {
         } else {
             isDrawing.current = true;
 
-            userEvents.current.lines.push({ points: [coords], lineWidth: getLineWidth(lineWidth) });
+            userEvents.current.lines.push({ points: [coords], lineWidth: getLineWidth(lineWidth), isRounded });
             drawingContext.current.beginPath();
             drawingContext.current.moveTo(coords.x, coords.y);
         }
@@ -98,8 +100,9 @@ export const Drawing: React.FC<{ imageData: string }> = ({ imageData }) => {
             drawingContext.current.fillStyle = 'white';
             drawingContext.current.fillRect(0, 0, ref.current!.width, ref.current!.height);
         }
-        userEvents.current.lines.forEach(({ points, lineWidth }) => {
+        userEvents.current.lines.forEach(({ points, lineWidth, isRounded }) => {
             drawingContext.current.beginPath();
+            drawingContext.current.lineCap = isRounded ? 'round' : 'butt';
             drawingContext.current.lineWidth = lineWidth;
             drawingContext.current.moveTo(points[0].x, points[0].y);
             points.slice(1).forEach(({ x, y }) => {
@@ -108,6 +111,7 @@ export const Drawing: React.FC<{ imageData: string }> = ({ imageData }) => {
             drawingContext.current.stroke();
         });
         drawingContext.current.lineWidth = getLineWidth(lineWidth);
+        drawingContext.current.lineCap = isRounded ? 'round' : 'butt';
         userEvents.current.texts.forEach(({ coords: { x, y }, text }) => {
             drawingContext.current.fillStyle = 'black';
             drawingContext.current.fillText(text, x, y + getFontSize(fontSize));
@@ -145,12 +149,18 @@ export const Drawing: React.FC<{ imageData: string }> = ({ imageData }) => {
         redraw(nextChecked);
     };
 
+    const toggleIsRounded = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const nextChecked = e.target.checked;
+        setIsRounded(nextChecked);
+        drawingContext.current.lineCap = nextChecked ? 'round' : 'butt';
+    };
+
     return (
         <>
             <div className={'canvas-bg'} style={{ backgroundImage: `url(${imageData})` }} />
             <canvas
-                width={1000}
-                height={1000}
+                width={widthAndHeight}
+                height={widthAndHeight}
                 ref={ref}
                 onMouseDown={onMouseDown}
                 onTouchStart={onMouseDown}
@@ -186,11 +196,19 @@ export const Drawing: React.FC<{ imageData: string }> = ({ imageData }) => {
                     )}
                     {!isPlaceText && (
                         <label>
+                            <input type="checkbox" onChange={toggleIsRounded} checked={isRounded} />
+                            Rounded
+                        </label>
+                    )}
+                    {!isPlaceText && (
+                        <label>
                             Line Width
                             <input type="number" onChange={onChangeLineWidth} value={lineWidth} />
                         </label>
                     )}
-                    <button onClick={onPlaceText}>{isPlaceText ? 'Draw' : 'Add Text'}</button>
+                    <button onClick={onPlaceText}>
+                        {isPlaceText ? 'Draw' : <img src={TextFieldsIcon} alt="add text" />}
+                    </button>
                     <button onClick={revert}>Revert</button>
                     <DownloadButton format={isWhiteBackgroundJpeg ? 'jpeg' : 'png'} />
                 </div>

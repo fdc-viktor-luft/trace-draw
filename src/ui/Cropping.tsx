@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Coords, getEventCoords, TouchOrMouseEvent } from './common';
+import { Coords, getEventCoords, getNumber, TouchOrMouseEvent } from './common';
+import { Store, useSub } from '../store';
 
 type CroppingValues = { x: number; y: number; width: number; height: number; background: HTMLImageElement };
 
@@ -38,6 +39,8 @@ const convertToCoords = (e: TouchOrMouseEvent, canvas: HTMLCanvasElement): Coord
     return { x, y };
 };
 
+const getWidthAndHeight = (str: string): number => getNumber(str, 1000);
+
 export type CroppingProps = { imageData: string; setImageData: (data: string) => void };
 
 export const Cropping: React.FC<CroppingProps> = ({ imageData, setImageData }) => {
@@ -45,6 +48,7 @@ export const Cropping: React.FC<CroppingProps> = ({ imageData, setImageData }) =
     const ctx = useRef<CanvasRenderingContext2D>(null!);
     const croppingValues = useRef<CroppingValues>(null!);
     const mouseEnterPos = useRef<Coords & { time: number; startWidth: number }>();
+    const { widthAndHeight } = useSub((s) => s);
 
     const onMouseDown = (e: TouchOrMouseEvent) => {
         mouseEnterPos.current = {
@@ -120,6 +124,11 @@ export const Cropping: React.FC<CroppingProps> = ({ imageData, setImageData }) =
         setImageData(ref.current!.toDataURL());
     };
 
+    const onChangeWidthAndHeight = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const next = e.target.value;
+        Store.set({ widthAndHeight: getWidthAndHeight(next) });
+    };
+
     return (
         <div className="cropping">
             <canvas
@@ -134,6 +143,10 @@ export const Cropping: React.FC<CroppingProps> = ({ imageData, setImageData }) =
             />
             <footer>
                 <div className="buttons">
+                    <label>
+                        Width And Height in Pixels
+                        <input type="number" onChange={onChangeWidthAndHeight} value={widthAndHeight} />
+                    </label>
                     <button onClick={onDone}>Done</button>
                 </div>
             </footer>
