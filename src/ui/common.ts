@@ -10,3 +10,10 @@ export const getEventCoords = (e: TouchOrMouseEvent): Coords => {
 
     return { x, y };
 };
+
+export const getNumber = (str: string, fallback: number): number => {
+    if (!str) return fallback;
+    const num = +str;
+    if (isNaN(num)) return fallback;
+    return num;
+};
